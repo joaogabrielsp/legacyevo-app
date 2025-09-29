@@ -1,24 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NewProjectCard from '../../components/NewProjectCard/NewProjectCard';
+import RecentProjects from '../../components/RecentProjects/RecentProjects';
 import { NewProjectData, Project } from '../../types';
+import projectService from '../../services/ProjectService';
 
 const Home = () => {
   const [showNewProjectCard, setShowNewProjectCard] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
-  const handleCreateProject = (projectData: NewProjectData) => {
-    const newProject: Project = {
-      id: crypto.randomUUID(),
-      name: projectData.name,
-      type: projectData.type,
-      legacyPath: projectData.legacyPath,
-      newPath: projectData.newPath,
-      createdAt: new Date()
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const loadedProjects = await projectService.loadProjects();
+        setProjects(loadedProjects);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
     };
 
-    setProjects(prev => [...prev, newProject]);
-    console.log('Project created:', newProject);
-    setShowNewProjectCard(false);
+    loadProjects();
+  }, []);
+
+    const handleCreateProject = async (projectData: NewProjectData) => {
+    try {
+      const newProject = await projectService.saveProject(projectData);
+      setProjects(prev => [...prev, newProject]);
+      setShowNewProjectCard(false);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+    }
   };
 
   const handleCancel = () => {
@@ -29,14 +39,17 @@ const Home = () => {
     <div className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center text-white relative">
       {!showNewProjectCard ? (
         <>
-          <h1 className="text-6xl font-bold mb-4">Welcome to LegacyEVO!</h1>
+          <h1 className={`text-6xl font-bold mb-4 ${projects.length >= 3 ? 'mt-24' : ''}`}>Welcome to LegacyEVO!</h1>
           <p className="text-xl mb-8 text-gray-300">Faster, easier, smarter legacy system migrations.</p>
+
           <button
             onClick={() => setShowNewProjectCard(true)}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            className="bg-blue-600 hover:bg-blue-500 text-white px-6 mb-12 py-3 rounded-lg font-medium transition-colors"
           >
             New Project
           </button>
+
+          <RecentProjects projects={projects} />
         </>
       ) : (
         <div className="flex items-center justify-center w-full">
