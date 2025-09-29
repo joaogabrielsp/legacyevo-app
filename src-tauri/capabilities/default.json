@@ -9,6 +9,7 @@
     "core:default",
     "opener:default",
     "dialog:allow-open",
+    "dialog:allow-confirm",
     "fs:default",
     "fs:allow-appdata-write",
     "fs:allow-appdata-write-recursive"

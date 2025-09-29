@@ -3,6 +3,7 @@ import NewProjectCard from '../../components/NewProjectCard/NewProjectCard';
 import RecentProjects from '../../components/RecentProjects/RecentProjects';
 import { NewProjectData, Project } from '../../types';
 import projectService from '../../services/ProjectService';
+import { confirm } from '@tauri-apps/plugin-dialog';
 
 const Home = () => {
   const [showNewProjectCard, setShowNewProjectCard] = useState(false);
@@ -35,6 +36,24 @@ const Home = () => {
     setShowNewProjectCard(false);
   };
 
+  const handleDeleteProject = async (id: string) => {
+    const confirmed = await confirm('Are you sure you want to delete this project?', {
+      kind: 'warning',
+      title: 'Delete Project',
+      okLabel: 'Delete',
+      cancelLabel: 'Cancel'
+    });
+
+    if (confirmed) {
+      try {
+        await projectService.deleteProject(id);
+        setProjects(prev => prev.filter(p => p.id !== id));
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center text-white relative">
       {!showNewProjectCard ? (
@@ -49,7 +68,7 @@ const Home = () => {
             New Project
           </button>
 
-          <RecentProjects projects={projects} />
+          <RecentProjects projects={projects} onDeleteProject={handleDeleteProject} />
         </>
       ) : (
         <div className="flex items-center justify-center w-full">
