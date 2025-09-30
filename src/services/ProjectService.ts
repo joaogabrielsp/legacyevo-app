@@ -43,7 +43,7 @@ class ProjectService {
 
         return projects.map((project: any) => ({
           ...project,
-          createdAt: new Date(project.createdAt)
+          lastOpened: project.lastOpened ? new Date(project.lastOpened) : undefined
         }));
       } catch (parseError) {
         console.warn('Error parsing projects file, returning empty array:', parseError);
@@ -63,7 +63,7 @@ class ProjectService {
         type: projectData.type,
         legacyPath: projectData.legacyPath,
         newPath: projectData.newPath,
-        createdAt: new Date()
+        lastOpened: new Date()
       };
 
       const existingProjects = await this.loadProjects();
@@ -110,6 +110,19 @@ class ProjectService {
       await this.saveProjectsToFile(updatedProjects);
     } catch (error) {
       console.error('Error updating project:', error);
+      throw error;
+    }
+  }
+
+  async updateLastOpened(id: string): Promise<void> {
+    try {
+      const existingProjects = await this.loadProjects();
+      const updatedProjects = existingProjects.map(project =>
+        project.id === id ? { ...project, lastOpened: new Date() } : project
+      );
+      await this.saveProjectsToFile(updatedProjects);
+    } catch (error) {
+      console.error('Error updating last opened:', error);
       throw error;
     }
   }

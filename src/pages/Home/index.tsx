@@ -13,7 +13,11 @@ const Home = () => {
     const loadProjects = async () => {
       try {
         const loadedProjects = await projectService.loadProjects();
-        setProjects(loadedProjects);
+        // Ordenar por lastOpened (mais recente primeiro)
+        const sortedProjects = loadedProjects.sort((a, b) =>
+          new Date(b.lastOpened!).getTime() - new Date(a.lastOpened!).getTime()
+        );
+        setProjects(sortedProjects);
       } catch (error) {
         console.error('Failed to load projects:', error);
       }
@@ -25,7 +29,13 @@ const Home = () => {
     const handleCreateProject = async (projectData: NewProjectData) => {
     try {
       const newProject = await projectService.saveProject(projectData);
-      setProjects(prev => [...prev, newProject]);
+      setProjects(prev => {
+        const updatedProjects = [...prev, newProject];
+        const sortedProjects = updatedProjects.sort((a, b) =>
+          new Date(b.lastOpened!).getTime() - new Date(a.lastOpened!).getTime()
+        );
+        return sortedProjects;
+      });
       setShowNewProjectCard(false);
     } catch (error) {
       console.error('Failed to create project:', error);
@@ -54,6 +64,23 @@ const Home = () => {
     }
   };
 
+  const handleOpenProject = async (project: Project) => {
+    try {
+      await projectService.updateLastOpened(project.id);
+      // Atualizar a lista para reordenar
+      const loadedProjects = await projectService.loadProjects();
+      const sortedProjects = loadedProjects.sort((a, b) =>
+        new Date(b.lastOpened!).getTime() - new Date(a.lastOpened!).getTime()
+      );
+      setProjects(sortedProjects);
+
+      // Aqui depois será a navegação para a workspace
+      console.log('Abrindo projeto:', project.name);
+    } catch (error) {
+      console.error('Failed to open project:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center text-white relative">
       {!showNewProjectCard ? (
@@ -68,7 +95,11 @@ const Home = () => {
             New Project
           </button>
 
-          <RecentProjects projects={projects} onDeleteProject={handleDeleteProject} />
+          <RecentProjects
+  projects={projects}
+  onDeleteProject={handleDeleteProject}
+  onOpenProject={handleOpenProject}
+/>
         </>
       ) : (
         <div className="flex items-center justify-center w-full">

@@ -14,7 +14,7 @@ export interface Project{
     type: ProjectType
     legacyPath?: string
     newPath?: string
-    createdAt: Date
+    lastOpened?: Date
 }
 
 export interface NewProjectData {

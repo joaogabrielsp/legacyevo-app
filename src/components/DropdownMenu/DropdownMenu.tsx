@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 interface DropdownMenuProps {
-  onDelete: () => void;
+  onDelete: (e: React.MouseEvent) => void;
   children: React.ReactNode;
 }
 
@@ -33,8 +33,8 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({ onDelete, children }) => {
       {isOpen && (
         <div className="absolute left-0 top-full mt-1 bg-zinc-800 rounded-md shadow-lg z-50 min-w-[120px] border border-zinc-700">
           <button
-            onClick={() => {
-              onDelete();
+            onClick={(e) => {
+              onDelete(e);
               setIsOpen(false);
             }}
             className="block w-full text-left px-4 py-2 text-red-400 hover:bg-zinc-700 hover:text-red-300 transition-colors"
