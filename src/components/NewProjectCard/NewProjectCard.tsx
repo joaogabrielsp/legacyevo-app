@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { homeDir } from '@tauri-apps/api/path';
+import { exists } from '@tauri-apps/plugin-fs';
 import { NewProjectData, ProjectType } from '../../types';
 
 interface NewProjectCardProps {
@@ -19,17 +20,86 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
     type: 'Web' as ProjectType
   });
 
+  const [validationErrors, setValidationErrors] = useState({
+    legacyPath: '',
+    newPath: ''
+  });
+
+  const [isValidating, setIsValidating] = useState(false);
+
   const projectTypes: ProjectType[] = ['API', 'Web', 'Terminal'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validatePath = async (path: string): Promise<string> => {
+    if (!path.trim()) {
+      return '';
+    }
+
+    try {
+      const pathExists = await exists(path);
+      if (!pathExists) {
+        return 'Directory not found';
+      }
+      return '';
+    } catch (error) {
+      return 'Invalid path';
+    }
+  };
+
+  const validatePaths = async () => {
+    setIsValidating(true);
+
+    const [legacyError, newError] = await Promise.all([
+      validatePath(formData.legacyPath),
+      validatePath(formData.newPath)
+    ]);
+
+    // Verificar se os caminhos são iguais
+    let duplicateError = '';
+    if (formData.legacyPath && formData.newPath && formData.legacyPath === formData.newPath) {
+      duplicateError = 'Paths must be different';
+    }
+
+    setValidationErrors({
+      legacyPath: legacyError || duplicateError,
+      newPath: newError || duplicateError
+    });
+
+    setIsValidating(false);
+    return !(legacyError || newError || duplicateError);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name && formData.legacyPath && formData.newPath) {
-      onCreateProject(formData);
+      const isValid = await validatePaths();
+      if (isValid) {
+        onCreateProject(formData);
+      }
     }
   };
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFieldBlur = async (field: 'legacyPath' | 'newPath') => {
+    if (formData[field]) {
+      const [legacyError, newError] = await Promise.all([
+        validatePath(formData.legacyPath),
+        validatePath(formData.newPath)
+      ]);
+
+      // Verificar se os caminhos são iguais
+      let duplicateError = '';
+      if (formData.legacyPath && formData.newPath && formData.legacyPath === formData.newPath) {
+        duplicateError = 'Paths must be different';
+      }
+
+      setValidationErrors({
+        legacyPath: legacyError || duplicateError,
+        newPath: newError || duplicateError
+      });
+    }
   };
 
   const handleSelectPath = async (field: 'legacyPath' | 'newPath') => {
@@ -113,7 +183,12 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
                 type="text"
                 value={formData.legacyPath}
                 onChange={(e) => handleInputChange('legacyPath', e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onBlur={() => handleFieldBlur('legacyPath')}
+                className={`flex-1 px-3 py-2 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  validationErrors.legacyPath
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-600'
+                }`}
                 placeholder="Enter legacy project path"
                 required
               />
@@ -125,6 +200,9 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
                 Browse
               </button>
             </div>
+            {validationErrors.legacyPath && (
+              <p className="mt-1 text-sm text-red-400">{validationErrors.legacyPath}</p>
+            )}
           </div>
 
           <div>
@@ -136,7 +214,12 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
                 type="text"
                 value={formData.newPath}
                 onChange={(e) => handleInputChange('newPath', e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-600 rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onBlur={() => handleFieldBlur('newPath')}
+                className={`flex-1 px-3 py-2 border rounded-md text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  validationErrors.newPath
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-600'
+                }`}
                 placeholder="Enter new project path"
                 required
               />
@@ -148,6 +231,9 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
                 Browse
               </button>
             </div>
+            {validationErrors.newPath && (
+              <p className="mt-1 text-sm text-red-400">{validationErrors.newPath}</p>
+            )}
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
