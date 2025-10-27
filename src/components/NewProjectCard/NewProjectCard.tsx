@@ -53,7 +53,6 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
       validatePath(formData.newPath)
     ]);
 
-    // Verificar se os caminhos são iguais
     let duplicateError = '';
     if (formData.legacyPath && formData.newPath && formData.legacyPath === formData.newPath) {
       duplicateError = 'Paths must be different';
@@ -89,7 +88,6 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
         validatePath(formData.newPath)
       ]);
 
-      // Verificar se os caminhos são iguais
       let duplicateError = '';
       if (formData.legacyPath && formData.newPath && formData.legacyPath === formData.newPath) {
         duplicateError = 'Paths must be different';
@@ -116,7 +114,6 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
         handleInputChange(field, selected);
       }
     } catch (error) {
-      console.error('Error selecting path:', error);
     }
   };
 

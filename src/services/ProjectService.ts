@@ -50,7 +50,6 @@ class ProjectService {
         return [];
       }
     } catch (error) {
-      console.error('Error loading projects:', error);
       return [];
     }
   }
@@ -73,7 +72,6 @@ class ProjectService {
 
       return newProject;
     } catch (error) {
-      console.error('Error saving project:', error);
       throw error;
     }
   }
@@ -85,7 +83,6 @@ class ProjectService {
       const content = JSON.stringify(projects, null, 2);
       await writeTextFile(filePath, content);
     } catch (error) {
-      console.error('Error saving projects to file:', error);
       throw error;
     }
   }
@@ -96,7 +93,6 @@ class ProjectService {
       const updatedProjects = existingProjects.filter(project => project.id !== id);
       await this.saveProjectsToFile(updatedProjects);
     } catch (error) {
-      console.error('Error deleting project:', error);
       throw error;
     }
   }
@@ -109,8 +105,16 @@ class ProjectService {
       );
       await this.saveProjectsToFile(updatedProjects);
     } catch (error) {
-      console.error('Error updating project:', error);
       throw error;
+    }
+  }
+
+  async getProjectById(id: string): Promise<Project | null> {
+    try {
+      const projects = await this.loadProjects();
+      return projects.find(project => project.id === id) || null;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -122,7 +126,6 @@ class ProjectService {
       );
       await this.saveProjectsToFile(updatedProjects);
     } catch (error) {
-      console.error('Error updating last opened:', error);
       throw error;
     }
   }

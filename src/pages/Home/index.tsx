@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import NewProjectCard from '../../components/NewProjectCard/NewProjectCard';
 import RecentProjects from '../../components/RecentProjects/RecentProjects';
 import { NewProjectData, Project } from '../../types';
 import projectService from '../../services/ProjectService';
 import { confirm } from '@tauri-apps/plugin-dialog';
+import TestService from '../../services/TestService';
 
 const Home = () => {
+  const navigate = useNavigate();
   const [showNewProjectCard, setShowNewProjectCard] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -13,13 +16,11 @@ const Home = () => {
     const loadProjects = async () => {
       try {
         const loadedProjects = await projectService.loadProjects();
-        // Ordenar por lastOpened (mais recente primeiro)
         const sortedProjects = loadedProjects.sort((a, b) =>
           new Date(b.lastOpened!).getTime() - new Date(a.lastOpened!).getTime()
         );
         setProjects(sortedProjects);
       } catch (error) {
-        console.error('Failed to load projects:', error);
       }
     };
 
@@ -38,7 +39,6 @@ const Home = () => {
       });
       setShowNewProjectCard(false);
     } catch (error) {
-      console.error('Failed to create project:', error);
     }
   };
 
@@ -46,7 +46,7 @@ const Home = () => {
     setShowNewProjectCard(false);
   };
 
-  const handleDeleteProject = async (id: string) => {
+  const handleDeleteProject = async (projectId: string) => {
     const confirmed = await confirm('Are you sure you want to delete this project?', {
       kind: 'warning',
       title: 'Delete Project',
@@ -56,10 +56,10 @@ const Home = () => {
 
     if (confirmed) {
       try {
-        await projectService.deleteProject(id);
-        setProjects(prev => prev.filter(p => p.id !== id));
+        await projectService.deleteProject(projectId);
+        await TestService.deleteAllTestsFromProject(projectId);
+        setProjects(prev => prev.filter(p => p.id !== projectId));
       } catch (error) {
-        console.error('Failed to delete project:', error);
       }
     }
   };
@@ -67,17 +67,14 @@ const Home = () => {
   const handleOpenProject = async (project: Project) => {
     try {
       await projectService.updateLastOpened(project.id);
-      // Atualizar a lista para reordenar
       const loadedProjects = await projectService.loadProjects();
       const sortedProjects = loadedProjects.sort((a, b) =>
         new Date(b.lastOpened!).getTime() - new Date(a.lastOpened!).getTime()
       );
       setProjects(sortedProjects);
 
-      // Aqui depois será a navegação para a workspace
-      console.log('Abrindo projeto:', project.name);
+      navigate(`/tests/${project.id}`);
     } catch (error) {
-      console.error('Failed to open project:', error);
     }
   };
 
