@@ -2,23 +2,34 @@ export interface TestCase {
   id: string
   name: string
   description: string
+  fullCode?: string  // Código do teste gerado pela IA
   status: "pending" | "running" | "passed" | "failed"
   legacyOutput?: string
   newOutput?: string
   executionTime?: number
 }
 
-export interface TestCode {
+// 🆕 Tipo completo recebido do backend Rust com metadados de execução
+export interface FullTestFromAI {
   id: string
   name: string
   description: string
   fullCode: string
+  expectedExitCode: number
+  timeout?: number
+
+  // 🆕 Execução específica para cada projeto
+  legacyExec: ExecutionInfo
+  newExec: ExecutionInfo
 }
 
-// Geração de Testes (IA)
-export interface TestGenerationResponse {
-  projectId: string
-  generatedTests: TestCode[]
+// Informações de como executar cada projeto
+export interface ExecutionInfo {
+  type: string                    // "c_compiled", "python", "node", etc.
+  sourceFile: string              // "calculadora.c", "calculadora.py"
+  compileCommand?: string         // "gcc -o calculadora calculadora.c -lm"
+  executeCommand: string          // "./calculadora", "python calculadora.py"
+  workingDirectory: string        // Caminho completo para o diretório do projeto
 }
 
 // Execução de Testes (Runtime)
@@ -47,7 +58,6 @@ export interface NewProjectData {
   type: ProjectType;
 }
 
-export type TestScreen = "test-list" | "test-results"
 
 export type ProjectType = 'API' | 'Web' | 'Terminal';
 

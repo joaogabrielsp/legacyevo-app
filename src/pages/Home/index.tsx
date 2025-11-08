@@ -6,6 +6,7 @@ import { NewProjectData, Project } from '../../types';
 import projectService from '../../services/ProjectService';
 import { confirm } from '@tauri-apps/plugin-dialog';
 import TestService from '../../services/TestService';
+import ExecutionService from '../../services/ExecutionService';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ const Home = () => {
       try {
         await projectService.deleteProject(projectId);
         await TestService.deleteAllTestsFromProject(projectId);
+        await ExecutionService.deleteAllExecutionsFromProject(projectId);
         setProjects(prev => prev.filter(p => p.id !== projectId));
       } catch (error) {
       }

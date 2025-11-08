@@ -4,13 +4,11 @@ import type { TestCase } from "../../types";
 
 interface TestCardsProps {
   tests: TestCase[];
-  onRunSingleTest?: (testId: string) => void;
   projectId?: string;
 }
 
 const TestCards: React.FC<TestCardsProps> = ({
   tests,
-  onRunSingleTest,
   projectId,
 }) => {
   const navigate = useNavigate();
@@ -93,7 +91,7 @@ const TestCards: React.FC<TestCardsProps> = ({
 
           <p className="text-sm text-gray-300 mb-4">{test.description}</p>
 
-          {onRunSingleTest && (
+          {/* onRunSingleTest && (
             <div className="flex justify-center mt-4">
               <button
                 onClick={(e) => {
@@ -108,7 +106,7 @@ const TestCards: React.FC<TestCardsProps> = ({
                 </svg>
               </button>
             </div>
-          )}
+          ) */}
         </div>
       ))}
     </div>

@@ -1,4 +1,4 @@
-import { TestCase, TestCode, TestGenerationResponse, TestExecutionResponse } from '../types';
+import { TestCase, TestExecutionResponse } from '../types';
 import { readTextFile, writeTextFile, exists, create, remove } from '@tauri-apps/plugin-fs';
 import { appDataDir, join } from '@tauri-apps/api/path';
 
@@ -6,11 +6,6 @@ class TestService {
   private async getTestsFilePath(projectId: string): Promise<string> {
     const appDir = await appDataDir();
     return await join(appDir, `tests-${projectId}.json`);
-  }
-
-  private async getTestCodesFilePath(projectId: string): Promise<string> {
-    const appDir = await appDataDir();
-    return await join(appDir, `test-codes-${projectId}.json`);
   }
 
   private async ensureAppDataDir(): Promise<void> {
@@ -25,18 +20,9 @@ class TestService {
     }
   }
 
-  async saveGeneratedTests(projectId: string, generationResponse: TestGenerationResponse): Promise<void> {
+  async saveGeneratedTests(projectId: string, tests: TestCase[]): Promise<void> {
     try {
       await this.ensureAppDataDir();
-
-      const testCodesFilePath = await this.getTestCodesFilePath(projectId);
-      const testCodes: Record<string, TestCode> = {};
-
-      generationResponse.generatedTests.forEach(test => {
-        testCodes[test.id] = test;
-      });
-
-      await writeTextFile(testCodesFilePath, JSON.stringify(testCodes, null, 2));
 
       const testsFilePath = await this.getTestsFilePath(projectId);
       let existingTests: Record<string, TestCase> = {};
@@ -49,15 +35,11 @@ class TestService {
         }
       }
 
-      generationResponse.generatedTests.forEach(test => {
-        if (!existingTests[test.id]) {
-          existingTests[test.id] = {
-            id: test.id,
-            name: test.name,
-            description: test.description,
-            status: 'pending'
-          };
-        }
+      tests.forEach(test => {
+        existingTests[test.id] = {
+          ...test,
+          status: 'pending'
+        };
       });
 
       await writeTextFile(testsFilePath, JSON.stringify(existingTests, null, 2));
@@ -104,26 +86,7 @@ class TestService {
     }
   }
 
-  async getTestCodeById(projectId: string, testId: string): Promise<TestCode | null> {
-    try {
-      await this.ensureAppDataDir();
-      const testCodesFilePath = await this.getTestCodesFilePath(projectId);
-      const fileExists = await exists(testCodesFilePath);
-
-      if (!fileExists) {
-        return null;
-      }
-
-      const content = await readTextFile(testCodesFilePath);
-      const testCodes: Record<string, TestCode> = JSON.parse(content);
-      const testCode = testCodes[testId];
-
-      return testCode || null;
-    } catch (error) {
-      return null;
-    }
-  }
-
+  
   async updateTestResult(projectId: string, testId: string, result: {
     status: TestCase['status'];
     executionTime?: number;
@@ -199,17 +162,6 @@ class TestService {
         delete tests[testId];
         await writeTextFile(testsFilePath, JSON.stringify(tests, null, 2));
       }
-
-      const testCodesFilePath = await this.getTestCodesFilePath(projectId);
-      let testCodes: Record<string, TestCode> = {};
-
-      const codesFileExists = await exists(testCodesFilePath);
-      if (codesFileExists) {
-        const content = await readTextFile(testCodesFilePath);
-        testCodes = JSON.parse(content);
-        delete testCodes[testId];
-        await writeTextFile(testCodesFilePath, JSON.stringify(testCodes, null, 2));
-      }
     } catch (error) {
       throw error;
     }
@@ -220,14 +172,9 @@ class TestService {
       await this.ensureAppDataDir();
 
       const testsFilePath = await this.getTestsFilePath(projectId);
-      const testCodesFilePath = await this.getTestCodesFilePath(projectId);
 
       if (await exists(testsFilePath)) {
         await remove(testsFilePath);
-      }
-
-      if (await exists(testCodesFilePath)) {
-        await remove(testCodesFilePath);
       }
     } catch (error) {
       throw error;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TestCase, TestCode } from "../../types";
+import { TestCase } from "../../types";
 import TestService from "../../services/TestService";
 import CodeEditor from "../CodeEditor/CodeEditor";
 
@@ -9,7 +9,7 @@ interface TestDetailsProps {
 }
 
 const TestDetails: React.FC<TestDetailsProps> = ({ test, projectId }) => {
-  const [testCode, setTestCode] = useState<TestCode | null>(null);
+  const [fullTest, setFullTest] = useState<TestCase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const getStatusColor = (status: TestCase["status"]) => {
@@ -26,17 +26,17 @@ const TestDetails: React.FC<TestDetailsProps> = ({ test, projectId }) => {
   };
 
   useEffect(() => {
-    const loadTestCode = async () => {
+    const loadFullTest = async () => {
       try {
-        const code = await TestService.getTestCodeById(projectId, test.id);
-        setTestCode(code);
+        const fullTestData = await TestService.getTestById(projectId, test.id);
+        setFullTest(fullTestData);
       } catch (error) {
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadTestCode();
+    loadFullTest();
   }, [projectId, test.id]);
 
   if (isLoading) {
@@ -103,17 +103,67 @@ const TestDetails: React.FC<TestDetailsProps> = ({ test, projectId }) => {
           Execution time: {test.executionTime}ms
         </div>
 
-        {testCode && (
+        {(test.legacyOutput || test.newOutput) && (
+          <div className="mt-8 space-y-6">
+            <h2 className="text-2xl font-semibold text-white mb-4">Execution Results</h2>
+
+            {test.legacyOutput && (
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-blue-400 mb-2">Legacy Output</h3>
+                <pre className="text-green-400 font-mono text-sm whitespace-pre-wrap">
+                  {test.legacyOutput}
+                </pre>
+              </div>
+            )}
+
+            {test.newOutput && (
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-purple-400 mb-2">New Output</h3>
+                <pre className="text-green-400 font-mono text-sm whitespace-pre-wrap">
+                  {test.newOutput}
+                </pre>
+              </div>
+            )}
+
+            {test.legacyOutput && test.newOutput && (
+              <div className="bg-gray-800 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-yellow-400 mb-2">Comparison</h3>
+                <div className="flex items-center space-x-2">
+                  {test.legacyOutput === test.newOutput ? (
+                    <>
+                      <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-green-400">Outputs are identical</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span className="text-red-400">Outputs differ</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {fullTest?.fullCode && (
           <div className="mt-8">
-            <h2 className="text-2xl font-semibold text-white mb-4">Code</h2>
-            <CodeEditor
-              value={testCode.fullCode}
-              language="typescript"
-              height={`min(60vh, ${
-                400 + testCode.fullCode.split("\n").length * 20
-              }px)`}
-              readOnly
-            />
+            <h2 className="text-2xl font-semibold text-white mb-4">Test Details</h2>
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h3 className="text-lg font-medium text-cyan-400 mb-2">Test Input/Configuration</h3>
+              <CodeEditor
+                value={fullTest.fullCode}
+                language="text"
+                height={`min(40vh, ${
+                  200 + fullTest.fullCode.split("\n").length * 20
+                }px)`}
+                readOnly
+              />
+            </div>
           </div>
         )}
       </div>

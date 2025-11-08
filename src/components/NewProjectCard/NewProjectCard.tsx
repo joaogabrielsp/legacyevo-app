@@ -17,7 +17,7 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
     name: '',
     legacyPath: '',
     newPath: '',
-    type: 'Web' as ProjectType
+    type: 'Terminal' as ProjectType
   });
 
   const [validationErrors, setValidationErrors] = useState({
@@ -134,20 +134,28 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Project Type
-            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-sm font-medium text-gray-300">
+                Project Type
+              </label>
+              <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded-full">
+                Only Terminal available in this version
+              </span>
+            </div>
             <div className="flex border border-zinc-600 rounded-md overflow-hidden">
               {projectTypes.map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => handleInputChange('type', type)}
+                  disabled={type === 'API' || type === 'Web'}
                   className={`
                     flex-1 px-6 py-2.5 text-sm font-medium transition-colors
-                    ${formData.type === type
-                      ? 'bg-zinc-700 text-white border-2 border-zinc-500'
-                      : 'text-gray-300 hover:bg-zinc-700/50'
+                    ${type === 'API' || type === 'Web'
+                      ? 'cursor-not-allowed'
+                      : formData.type === type
+                        ? 'bg-zinc-700 text-white border-2 border-zinc-500'
+                        : 'text-gray-300 hover:bg-zinc-700/50'
                     }
                   `}
                 >
@@ -243,9 +251,9 @@ const NewProjectCard: React.FC<NewProjectCardProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!formData.name || !formData.legacyPath || !formData.newPath}
+              disabled={!formData.name || !formData.legacyPath || !formData.newPath || isValidating}
               className={`px-6 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                !formData.name || !formData.legacyPath || !formData.newPath
+                !formData.name || !formData.legacyPath || !formData.newPath || isValidating
                   ? 'bg-blue-400 cursor-not-allowed text-gray-200'
                   : 'bg-blue-600 hover:bg-blue-500 text-white'
               }`}

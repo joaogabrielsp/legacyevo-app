@@ -36,7 +36,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="flex-1 p-4 space-y-4">
-        {/* Current Project */}
         <div className="bg-gray-800 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-300 mb-2">
             Current Project
@@ -58,10 +57,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Navigation */}
         {currentProject && (
           <nav className="space-y-1">
-            {/* Tests Link */}
             <Link
               to={`/tests/${currentProject.id}`}
               className={`flex items-center gap-3 px-4 py-2 rounded-md transition-colors ${
@@ -76,7 +73,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span>Tests</span>
             </Link>
 
-            {/* Execution Link */}
             <Link
               to={`/executions/${currentProject.id}`}
               className="flex items-center gap-3 px-4 py-2 rounded-md text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"

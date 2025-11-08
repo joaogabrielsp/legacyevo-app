@@ -3,18 +3,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import TestHeader from "../../components/Header/Header";
 import TestCards from "../../components/TestCards/TestCards";
-import type { Project, TestCase, TestScreen } from "../../types";
+import type { Project, TestCase } from "../../types";
 import ProjectService from "../../services/ProjectService";
 import TestService from "../../services/TestService";
-import MockAPIService from "../../services/MockAPIService";
 import ExecutionService from "../../services/ExecutionService";
+import { invoke } from "@tauri-apps/api/core";
 
 
 const Tests = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [currentScreen, setCurrentScreen] = useState<TestScreen>("test-list");
   const [tests, setTests] = useState<TestCase[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -34,6 +33,8 @@ const Tests = () => {
             const existingTests = await TestService.getTestsByProjectId(projectId);
             setTests(existingTests);
             setHasGeneratedTests(existingTests.length > 0);
+
+            // Backend salva os dados automaticamente, não precisa carregar fullTests aqui
           } else {
             navigate("/");
           }
@@ -53,24 +54,21 @@ const Tests = () => {
       return;
     }
 
-    setCurrentScreen("test-list");
     setIsGenerating(true);
 
     try {
-      const response = await MockAPIService.generateTests(projectId, currentProject.type);
+      // Backend gera e salva ambos os arquivos automaticamente
+      await invoke('generate_tests', {
+        projectId: projectId
+      });
 
-      await TestService.saveGeneratedTests(projectId, response);
-
-      const testCases: TestCase[] = response.generatedTests.map(test => ({
-        id: test.id,
-        name: test.name,
-        description: test.description,
-        status: 'pending' as const
-      }));
-
+      // Recarrega os TestCase do backend
+      const testCases = await TestService.getTestsByProjectId(projectId);
       setTests(testCases);
       setHasGeneratedTests(true);
     } catch (error) {
+      console.error('Erro ao gerar testes:', error);
+      // TODO: Adicionar toast/notificação de erro
     } finally {
       setIsGenerating(false);
     }
@@ -79,65 +77,40 @@ const Tests = () => {
   const handleRunTests = async () => {
     if (!projectId || !currentProject) return;
 
-    setCurrentScreen("test-results");
     setIsRunning(true);
 
     try {
       setTests(tests.map(test => ({ ...test, status: "running" as const, executionTime: 0 })));
 
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Backend carrega FullTestFromAI automaticamente
+      const executionResponse = await invoke<TestCase[]>('execute_tests', {
+        projectId: projectId
+      });
 
-      const executionResponse = await MockAPIService.executeTests(projectId);
-
-      await TestService.saveTestResults(projectId, executionResponse);
+      await TestService.saveTestResults(projectId, {
+        projectId,
+        executionId: crypto.randomUUID(),
+        testResults: executionResponse,
+        executedAt: new Date().toISOString(),
+        totalExecutionTime: executionResponse.reduce((acc, test) => acc + (test.executionTime || 0), 0)
+      });
 
       await ExecutionService.saveExecution(
         projectId,
         currentProject.name,
-        executionResponse.testResults
+        executionResponse
       );
 
-      setTests(executionResponse.testResults);
+      setTests(executionResponse);
     } catch (error) {
+      console.error('Erro ao executar testes:', error);
       setTests(tests.map(test => ({ ...test, status: "failed" as const })));
     } finally {
       setIsRunning(false);
     }
   };
 
-  const handleRunSingleTest = async (testId: string) => {
-    if (!projectId) return;
-
-    setCurrentScreen("test-results");
-    setIsRunning(true);
-
-    try {
-      setTests(tests.map(test =>
-        test.id === testId
-          ? { ...test, status: "running" as const, executionTime: 0 }
-          : test
-      ));
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const updatedTest = await MockAPIService.executeSingleTest(testId, projectId);
-
-      setTests(tests.map(test =>
-        test.id === testId ? updatedTest : test
-      ));
-
-      await TestService.saveTestResult(projectId, updatedTest);
-    } catch (error) {
-      setTests(tests.map(test =>
-        test.id === testId
-          ? { ...test, status: "failed" as const }
-          : test
-      ));
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
+  
   const displayTests = isGenerating || isRunning ? [] : tests;
 
   if (isLoading) {
@@ -186,17 +159,6 @@ const Tests = () => {
                 title={"Tests"}
                 subtitle={"Generate and Run Tests"}
                 actionButton={
-                  !hasGeneratedTests && currentScreen === "test-list" ? (
-                    <button
-                      onClick={handleGenerateTests}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      Generate Tests
-                    </button>
-                  ) :
                   hasGeneratedTests ? (
                     <button
                       onClick={handleRunTests}
@@ -208,14 +170,23 @@ const Tests = () => {
                       </svg>
                       Run Tests
                     </button>
-                  ) : null
+                  ) : (
+                    <button
+                      onClick={handleGenerateTests}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      Generate Tests
+                    </button>
+                  )
                 }
               />
             </div>
             <div className="flex-1 overflow-auto p-6">
               <TestCards
                 tests={displayTests}
-                onRunSingleTest={handleRunSingleTest}
                 projectId={projectId}
               />
             </div>
